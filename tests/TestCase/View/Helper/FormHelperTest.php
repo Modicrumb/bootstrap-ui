@@ -297,7 +297,7 @@ class FormHelperTest extends TestCase
                 'type' => 'text',
                 'name' => 'title',
                 'id' => 'title',
-                'class' => 'form-control ',
+                'class' => 'form-control',
                 'required' => 'required'
             ],
             ['div' => ['class' => 'help-block']],
@@ -358,6 +358,27 @@ class FormHelperTest extends TestCase
                 'id' => 'title',
                 'class' => 'form-control',
                 'required' => 'required'
+            ],
+            '/div',
+            '/div'
+        ];
+        $this->assertHtml($expected, $result);
+
+        $result = $this->Form->input('url', ['prepend' => 'http://']);
+        $expected = [
+            'div' => ['class' => 'form-group text'],
+            'label' => ['class' => 'control-label', 'for' => 'url'],
+            'Url',
+            '/label',
+            ['div' => ['class' => 'input-group']],
+            'span' => ['class' => 'input-group-addon'],
+            'http://',
+            '/span',
+            'input' => [
+                'type' => 'text',
+                'name' => 'url',
+                'id' => 'url',
+                'class' => 'form-control'
             ],
             '/div',
             '/div'
@@ -653,6 +674,62 @@ class FormHelperTest extends TestCase
             '/div',
             '/div'
         ];
+        $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * https://github.com/FriendsOfCake/bootstrap-ui/pull/113
+     *
+     * @return void
+     */
+    public function testRadioInputCustomTemplate()
+    {
+        $templates = [
+            'radioNestingLabel' => '<div class="radio custom-class">{{hidden}}<label{{attrs}}>{{input}}{{text}}</label></div>',
+        ];
+
+        $this->Form->create($this->article);
+
+        $result = $this->Form->input('published', [
+            'type' => 'radio',
+            'options' => ['Yes', 'No'],
+            'templates' => $templates
+        ]);
+        $expected = [
+            ['div' => ['class' => 'form-group radio']],
+            ['label' => true],
+            'Published',
+            '/label',
+            ['input' => [
+                'type' => 'hidden',
+                'name' => 'published',
+                'value' => '',
+            ]],
+            ['div' => ['class' => 'radio custom-class']],
+            ['label' => ['for' => 'published-0']],
+            ['input' => [
+                'type' => 'radio',
+                'name' => 'published',
+                'value' => 0,
+                'id' => 'published-0',
+            ]],
+            'Yes',
+            '/label',
+            '/div',
+            ['div' => ['class' => 'radio custom-class']],
+            ['label' => ['for' => 'published-1']],
+            ['input' => [
+                'type' => 'radio',
+                'name' => 'published',
+                'value' => 1,
+                'id' => 'published-1',
+            ]],
+            'No',
+            '/label',
+            '/div',
+            '/div'
+        ];
+
         $this->assertHtml($expected, $result);
     }
 
@@ -1011,6 +1088,17 @@ class FormHelperTest extends TestCase
         $this->assertHtml($expected, $result);
     }
 
+    public function testPrimaryStyledButton()
+    {
+        $result = $this->Form->button('Submit', ['class' => 'primary']);
+        $expected = [
+            'button' => ['class' => 'btn-primary btn', 'type' => 'submit'],
+            'Submit',
+            '/button'
+        ];
+        $this->assertHtml($expected, $result);
+    }
+
     public function testMultipleCheckboxInput()
     {
         $this->Form->create($this->article);
@@ -1126,13 +1214,39 @@ class FormHelperTest extends TestCase
                 'type' => 'text',
                 'name' => 'title',
                 'id' => 'title',
-                'class' => 'form-control ',
+                'class' => 'form-control',
                 'required' => 'required'
             ],
             ['div' => ['class' => 'help-block']],
             'error message',
             '/div',
             ['div' => ['class' => 'help-block']],
+            'help text',
+            '/div',
+            '/div'
+        ];
+        $this->assertHtml($expected, $result);
+
+        $result = $this->Form->input('title', [
+            'help' => 'help text',
+            'templates' => ['help' => '<div class="custom-help-block">{{content}}</div>']
+        ]);
+        $expected = [
+            'div' => ['class' => 'form-group text required has-error'],
+            'label' => ['class' => 'control-label', 'for' => 'title'],
+            'Title',
+            '/label',
+            'input' => [
+                'type' => 'text',
+                'name' => 'title',
+                'id' => 'title',
+                'class' => 'form-control',
+                'required' => 'required'
+            ],
+            ['div' => ['class' => 'help-block']],
+            'error message',
+            '/div',
+            ['div' => ['class' => 'custom-help-block']],
             'help text',
             '/div',
             '/div'
@@ -1210,7 +1324,7 @@ class FormHelperTest extends TestCase
                 'type' => 'text',
                 'name' => 'title',
                 'id' => 'title',
-                'class' => 'form-control ',
+                'class' => 'form-control',
                 'required' => 'required'
             ],
             ['div' => ['class' => 'help-block']],
@@ -1223,5 +1337,37 @@ class FormHelperTest extends TestCase
             '/div'
         ];
         $this->assertHtml($expected, $result);
+    }
+
+    /**
+     * Test that "form-control" class is added when using methods for specific input.
+     *
+     * @return void
+     */
+    public function testFormControlClassInjection()
+    {
+        $result = $this->Form->text('foo');
+        $this->assertContains('class="form-control"', $result);
+
+        $result = $this->Form->text('foo', ['class' => 'custom']);
+        $this->assertContains('class="custom form-control"', $result);
+
+        $result = $this->Form->select('foo');
+        $this->assertContains('class="form-control"', $result);
+
+        $result = $this->Form->textarea('foo');
+        $this->assertContains('class="form-control"', $result);
+
+        $result = $this->Form->dateTime('foo');
+        $this->assertContains('class="form-control"', $result);
+
+        $result = $this->Form->file('foo');
+        $this->assertNotContains('"form-control"', $result);
+
+        $result = $this->Form->checkbox('foo');
+        $this->assertNotContains('"form-control"', $result);
+
+        $result = $this->Form->radio('foo', ['1' => 'Opt 1', '2' => 'Opt 2']);
+        $this->assertNotContains('"form-control"', $result);
     }
 }

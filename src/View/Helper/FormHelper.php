@@ -36,7 +36,8 @@ class FormHelper extends Helper
         'radioInlineFormGroup' => '{{label}}<div class="radio-inline-wrapper">{{input}}</div>',
         'radioNestingLabel' => '<div class="radio">{{hidden}}<label{{attrs}}>{{input}}{{text}}</label></div>',
         'staticControl' => '<p class="form-control-static">{{content}}</p>',
-        'select' => '<select name="{{name}}"{{attrs}}>{{content}}</select>'
+        'inputGroupAddon' => '<span class="{{class}}">{{content}}</span>',
+        'inputGroupContainer' => '<div class="input-group">{{prepend}}{{content}}{{append}}</div>',
     ];
 
     /**
@@ -70,8 +71,9 @@ class FormHelper extends Helper
      */
     protected $_widgets = [
         'button' => 'BootstrapUI\View\Widget\ButtonWidget',
-        'checkbox' => 'BootstrapUI\View\Widget\CheckboxWidget',
         'radio' => ['BootstrapUI\View\Widget\RadioWidget', 'nestingLabel'],
+        'select' => 'BootstrapUI\View\Widget\SelectBoxWidget',
+        'textarea' => 'BootstrapUI\View\Widget\TextareaWidget',
         '_default' => 'BootstrapUI\View\Widget\BasicWidget',
     ];
 
@@ -168,6 +170,9 @@ class FormHelper extends Helper
      * Generates a form input element complete with label and wrapper div.
      *
      * Adds extra option besides the ones supported by parent class method:
+     * - `append` - Append addon to input.
+     * - `prepend` - Prepend addon to input.
+     * - `inline` - Boolean for generating inline checkbox/radio.
      * - `help` - Help text of include in the input container.
      *
      * @param string $fieldName This should be "Modelname.fieldname".
@@ -179,16 +184,25 @@ class FormHelper extends Helper
         $options += [
             'prepend' => null,
             'append' => null,
+            'inline' => null,
             'type' => null,
             'label' => null,
             'error' => null,
             'required' => null,
             'options' => null,
             'help' => null,
-            'templates' => []
+            'templates' => [],
+            'templateVars' => []
         ];
         $options = $this->_parseOptions($fieldName, $options);
-        $reset = $this->templates();
+
+        $newTemplates = $options['templates'];
+        if ($newTemplates) {
+            $this->templater()->push();
+            $templateMethod = is_string($options['templates']) ? 'load' : 'add';
+            $this->templater()->{$templateMethod}($options['templates']);
+            $options['templates'] = [];
+        }
 
         switch ($options['type']) {
             case 'checkbox':
@@ -198,26 +212,23 @@ class FormHelper extends Helper
 
                 if ($options['inline']) {
                     $options['label'] = $this->injectClasses($options['type'] . '-inline', (array)$options['label']);
+                    if (!isset($newTemplates['checkboxContainer'])) {
+                        $options['templates']['checkboxContainer'] = '{{content}}';
+                    }
                 }
+                unset($options['inline']);
                 break;
             case 'radio':
-                $isInline = (isset($options['inline']) && $options['inline'] === true);
-
-                $templates = [];
-                if ($isInline && $this->_align !== 'horizontal') {
-                    $templates['formGroup'] = $this->templater()->get('radioInlineFormGroup');
+                if ($options['inline'] && $this->_align !== 'horizontal') {
+                    $options['templates']['formGroup'] = $this->templater()->get('radioInlineFormGroup');
                 }
-                if (!$isInline) {
-                    $templates['nestingLabel'] = $this->templater()->get('radioNestingLabel');
+                if (!$options['inline']) {
+                    $options['templates']['nestingLabel'] = $this->templater()->get('radioNestingLabel');
                 }
-
-                $this->templater()->add($templates);
                 break;
             case 'select':
                 if (isset($options['multiple']) && $options['multiple'] === 'checkbox') {
-                    $this->templater()->add([
-                        'checkboxWrapper' => $this->templater()->get('multipleCheckboxWrapper')
-                    ]);
+                    $options['templates']['checkboxWrapper'] = $this->templater()->get('multipleCheckboxWrapper');
                     $options['type'] = 'multicheckbox';
                 }
                 break;
@@ -230,10 +241,6 @@ class FormHelper extends Helper
                 }
         }
 
-        if (!in_array($options['type'], ['checkbox', 'radio', 'hidden', 'staticControl'])) {
-            $options = $this->injectClasses('form-control', $options);
-        }
-
         if ($options['help']) {
             $options['help'] = $this->templater()->format(
                 'help',
@@ -242,7 +249,9 @@ class FormHelper extends Helper
         }
 
         $result = parent::input($fieldName, $options);
-        $this->templates($reset);
+        if ($newTemplates) {
+            $this->templater()->pop();
+        }
         return $result;
     }
 
@@ -338,6 +347,7 @@ class FormHelper extends Helper
             'input' => $options['input'],
             'label' => $options['label'],
             'error' => $options['error'],
+            'templateVars' => isset($options['options']['templateVars']) ? $options['options']['templateVars'] : [],
             'help' => $options['options']['help']
         ]);
     }
@@ -360,6 +370,7 @@ class FormHelper extends Helper
             'error' => $options['error'],
             'required' => $options['options']['required'] ? ' required' : '',
             'type' => $options['options']['type'],
+            'templateVars' => isset($options['options']['templateVars']) ? $options['options']['templateVars'] : [],
             'help' => $options['options']['help']
         ]);
     }

@@ -27,26 +27,63 @@ Transparently use [Twitter Bootstrap 3][twbs3] with [CakePHP 3][cakephp].
 Using [Composer][composer]:
 
 ```
-composer require friendsofcake/bootstrap-ui:~0.3
+composer require friendsofcake/bootstrap-ui
 ```
 
-You then need to load the plugin. In `boostrap.php`, something like:
+Then load the plugin by adding the following to your app's `config/boostrap.php`:
 
 ```php
 \Cake\Core\Plugin::load('BootstrapUI');
 ```
 
-For a complete setup, add the following to your `src\View\AppView`:
+or using CakePHP's console:
+
+```
+./bin/cake plugin load BootstrapUI
+```
+
+## AppView Setup
+Then for a complete setup, just make your `AppView` class extends `BootstrapUI\View\UIView`.
+The `src\View\AppView.php` then will be as the following: 
 
 ```php
-public $layout = 'BootstrapUI.default';
+namespace App\View;
 
-public function initialize()
+use BootstrapUI\View\UIView;
+
+class AppView extends UIView
 {
-    $this->loadHelper('Html', ['className' => 'BootstrapUI.Html']);
-    $this->loadHelper('Form', ['className' => 'BootstrapUI.Form']);
-    $this->loadHelper('Flash', ['className' => 'BootstrapUI.Flash']);
-    $this->loadHelper('Paginator', ['className' => 'BootstrapUI.Paginator']);
+
+    /**
+     * Initialization hook method.
+     */
+    public function initialize()
+    {
+        //Don't forget to call the parent::initialize()
+        parent::initialize();
+    }
+}
+```
+
+### AppView Setup Using UIViewTrait
+```php
+namespace App\View;
+
+use Cake\View\View;
+
+class AppView extends View
+{
+
+    use UIViewTrait;
+    
+    /**
+     * Initialization hook method.
+     */
+    public function initialize()
+    {
+        //render the initializeUI method from the UIViewTrait
+        $this->initializeUI();
+    }
 }
 ```
 
